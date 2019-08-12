@@ -9,26 +9,35 @@
     <title>Downloader</title>
 </head>
 
-<body>
+<body id="body">
     <h1>Downloader</h1>
-    
-    <div class="output" id="output"></div>
-    <div class="output-mid" id="output-mid">
-        Please input parallel download image quantity (default: <font color="red">10</font>)
+    <div style="text-align: center;">
+        <div style="display: inline-block; text-align: left;" class="output" id="output">
+            Please input parallel download image quantity (default: <font color="red">10</font>)
+        </div>
     </div>
     <div class="input" id="send">
-        <input type="text" class="text_box" id="input">
-        <button id="button" onclick="input()">Enter</button>
+        <input type="text" class="text_box" id="input" autofocus>
+        <!-- <button type="button" id="button" onclick="input()">Enter</button> -->
     </div>
     <div class="progress" id="progress"></div>
     <script src="app.js"></script>
     <script>
-        document.getElementById("input").addEventListener("keyup", function(event) {
+        document.getElementById("body").addEventListener("keyup", function(event) {
             event.preventDefault();
-            if (event.keyCode === 13) {
-                document.getElementById("button").click();
+            if (event.keyCode === 27) {
+                document.getElementById("input").focus();
+                document.getElementById("input").value = '';
             }
+            if (document.activeElement == document.body) {
+                console.log("Focused");
+                document.getElementById("input").focus();
+            }else if (event.keyCode === 13)
+                input();
+                    // document.getElementById("button").click();
         });
+
+       
     </script>
 </body>
 

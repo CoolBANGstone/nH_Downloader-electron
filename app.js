@@ -21,45 +21,47 @@ fs.mkdir(down_path, function(err) {});
 function input() {
     const input = document.getElementById('input');
     const out = document.querySelector('.output');
-    const mid = document.querySelector('.output-mid');
     const value = input.value;
     switch (stage) {
         case 0: // Speed
             if (value != '')
                 PARALLEL = value;
             stage = 1;
-            mid.innerText = ''; hide('output-mid', true);
             out.innerText =
-                    'Please select action:\n' +
-                    '6-digit-number: Download nhentai/g/xxxxxx\n' +
-                    `fav: Download account's favorite manga\n` +
-                    `file: Download from 'download.txt'\n` +
-                    `continue: Continue download(queue.txt)\n`;
+                'Please select action:\n' +
+                '6-digit-number: Download nhentai/g/xxxxxx\n' +
+                `fav: Download account's favorite manga\n` +
+                `file: Download from 'download.txt'\n` +
+                `continue: Continue download(queue.txt)\n`;
             break;
         case 1: // Action
-            out.innerText = ''; hide('output', true);
-            hide('output-mid', false);
             if (value == 'fav') {
                 stage = 2;
-                mid.innerText = 'Username or Email:';
+                out.innerText = 'Username or Email:';
             }else if (value == 'file') {
+                stage = -1;
                 fs.readFile(path.join(down_path, 'download.txt'), function (err, data) {
-                    if (err)
-                        throw err;
+                    if (err) {
+                        console.error(err);
+                        stage = 1;
+                        return;
+                    }
                     var queue = data.toString().split('\n');
                     queue.pop();
                     argv(0, queue, true);
                 });
-                stage = -1;
             }else if (value == 'continue') {
+                stage = -1;
                 fs.readFile(path.join(down_path, 'queue.txt'), function (err, data) {
-                    if (err)
-                        throw err;
+                    if (err) {
+                        console.error(err);
+                        stage = 1;
+                        return;
+                    }
                     var queue = data.toString().split('\n');
                     queue.pop();
                     argv(0, queue, true);
                 });
-                stage = -1;
             }else {
                 argv(0, value.split(' '), true);
                 stage = -1;
@@ -68,12 +70,14 @@ function input() {
         case 2:
             username = value;
             stage = 3;
-            mid.innerText = 'Password:';
+            out.innerText = 'Password:';
+            document.getElementById('input').type = 'password';
             break;
         case 3:
             pass = value;
             stage = 4;
-            // mid.innerText = 'Logging in...';
+            document.getElementById('input').type = 'text';
+            hide('send', true);
             login(username, pass);
             break;
         case 4:
@@ -86,20 +90,15 @@ function input() {
             stage = -1;
             break;
         case -1:
-            if (value == '') {
-                hide('output', false);
-                mid.innerText = ''; hide('output-mid', true);
-                out.innerText = 'Please select action:\n' +
-                    '6-digit-number: Download nhentai/g/xxxxxx\n' +
-                    `fav: Download account's favorite manga\n` +
-                    `file: Download from 'download.txt'\n` +
-                    `continue: Continue download(queue.txt)\n`;
-                stage = 1;
-                input();
-            }
+            out.innerText =
+                'Please select action:\n' +
+                '6-digit-number: Download nhentai/g/xxxxxx\n' +
+                `fav: Download account's favorite manga\n` +
+                `file: Download from 'download.txt'\n` +
+                'continue: Continue download(queue.txt)\n';
+            stage = 1;
     }
     input.value = '';
-    
 }
 function hide(object, status) {
     if (status)
@@ -114,8 +113,10 @@ http.globalAgent.maxSockets = Infinity;
 async function exit_program() {
     hide('send', false);
     hide('progress', true); 
-    document.querySelector('.output-mid').innerText = 'Download complete!\nHit \'Enter\' to continue.';
-    document.querySelector('.progress').innerText = 'Download complete!\nHit \'Enter\' to continue.';
+    document.querySelector('.output').innerText = 'Download complete!\nHit \'Enter\' to continue.';
+    document.querySelector('.progress').innerText = '';
+    document.getElementById('input').focus();
+    stage = -1;
 }
 
 
@@ -154,7 +155,7 @@ function download(val) {
             var dirname = replace_str(`${title}(${val})`);
             fs.mkdir(path.join(down_path, dirname), function(err) {});
 
-            document.querySelector('.output-mid').innerText = `${title} (${cnt}p) (${val})`;
+            document.querySelector('.output').innerText = `${title} (${cnt}p) (${val})`;
             // console.log(`${title} (${cnt}p) (${val})`);
 
             await run(cnt, uri, val, dirname);
@@ -261,7 +262,7 @@ async function argv(start, queue, exit_when_end, argc) {
         end = false;
         hide('send', true);
         hide('progress', false);
-        document.querySelector('.output-mid').innerText = '';
+        document.querySelector('.output').innerText = '';
         for (var i = start; i < queue.length; i++)
             await download(queue[i]);
         hide('send', false);
@@ -281,7 +282,7 @@ async function logging_in_text() {
         else
             cnt++;
         if (!loggedin)
-            document.querySelector('.output-mid').innerText = str;
+            document.querySelector('.output').innerText = str;
         else
             break;
         await sleep(200);
@@ -347,9 +348,10 @@ async function login(username, pass) {
                 // select_page(pages, headers);
                 PAGES = pages;
                 HEADERS = headers;
-                document.querySelector('.output-mid').innerText = `Total pages: ${pages}\n` + 
+                document.querySelector('.output').innerText = `Total pages: ${pages}\n` + 
                 'Insert download page range: (ex. \"1 5\")';
-                
+                hide('send', false);
+                document.getElementById('input').focus();
             });
         });
     })
