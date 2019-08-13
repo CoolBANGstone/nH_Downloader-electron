@@ -1,34 +1,46 @@
 {
-  "name": "download-electron",
-  "version": "1.0.0",
-  "description": "",
+  "name": "Downloader",
+  "version": "1.1.1",
+  "description": "nHentai downloader",
   "main": "main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "electron .",
-    "build-mac": "electron-packager . Downloader --overwrite --platform=darwin --arch=x64 --prune=true --squirrel-install --ignore=node_modules/electron-* --version-string.CompanyName=Samuel --version-string.ProductName=Downloader",
-    "build-win": "electron-packager . Downloader --overwrite --platform=win32 --arch=x64 --prune=true --squirrel-install --ignore=node_modules/electron-* --version-string.CompanyName=Samuel --version-string.ProductName=Downloader --icon=icon.ico",
-    "pack": "grunt"
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "com.downloader.app",
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ]
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "category": "com.samuelhuang.app",
+      "compression": "maximum"
+    }
   },
   "keywords": [],
-  "author": "",
+  "author": "Samuel",
   "license": "ISC",
   "dependencies": {
-    "child_process": "^1.0.2",
     "colors": "^1.3.3",
     "downloads-folder": "^1.0.1",
-    "electron": "^6.0.1",
     "fs": "0.0.1-security",
     "http": "0.0.0",
     "math": "0.0.3",
-    "moment": "^2.24.0",
     "path": "^0.12.7",
     "request": "^2.88.0",
     "set-cookie-parser": "^2.3.8"
   },
   "devDependencies": {
-    "electron-packager": "^14.0.4",
-    "grunt": "^1.0.4",
-    "grunt-electron-installer": "^2.1.0"
+    "electron": "^6.0.1",
+    "electron-builder": "^21.2.0",
+    "electron-packager": "^14.0.4"
   }
 }
