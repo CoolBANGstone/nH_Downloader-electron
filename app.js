@@ -16,7 +16,7 @@ var username, pass, loggedin = false;
 var PAGES = 0, HEADERS;
 UserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:68.0) Gecko/20100101 Firefox/68.0';
 
-const down_path = path.join(downloadsfolder(), 'nhentai_download');
+const down_path = path.join(downloadsfolder(), 'nH_Downloader');
 fs.mkdir(down_path, function(err) {});
 function input() {
     const input = document.getElementById('input');
@@ -85,7 +85,6 @@ function input() {
             var start = Number(arr[0]);
             var end = Number(arr[1]);
             if (start <= end && end <= PAGES)
-                //await download_page(start, end, headers, input.length == 3 && input[2] == '0');
                 download_page(start, end, HEADERS, true);
             stage = -1;
             break;
@@ -124,9 +123,8 @@ function download(val) {
     if (isNaN(val = val.substr(0, 6)))
         return;
     end = true;
-    //fs.mkdir(path.join('.', val), function(err) {});
     return new Promise((resolve, reject) => {
-        request({uri: `https://nhentai.net/g/${val}`}, async function(error, response, body) {
+        request({url: `https://nhentai.net/g/${val}`}, async function(error, response, body) {
             if (error || response.statusCode !== 200) {
                 console.log('Error: ' + val);
                 fs.rmdir(path.join('.', val), function(err) {});
@@ -165,42 +163,35 @@ function download(val) {
 }
 async function download_photo(uri, filename, callback, cnt) {
     if (cnt > 5) {
-        //console.log(colors.red(`\nSkip ${uri}(jpg/png)`));
         callback();
         return;
     }
     if (cnt > 0)
         console.log('\n' + filename + '   Error: ' + cnt);
 
-    request(uri + 'jpg').on('error', function(err) {
-        console.log(err);
-        download_photo(uri, filename, callback, cnt + 1);
-        return;
-    }).on('response', function(resp) {
-        if (resp.statusCode === 200)
-            request({uri: uri + 'jpg', host: 'i.nhentai.net'}).on('error', function(err) {
+    request.head({url: uri + 'jpg'}, function(err, resp, body) {
+        if (!err && resp.statusCode === 200)
+            request({url: uri + 'jpg'}).on('error', function(err) {
                 console.log(err);
                 download_photo(uri, filename, callback, cnt + 1);
                 return;
             }).pipe(fs.createWriteStream(filename + 'jpg')).on('close', callback);
         else
-            request({uri: uri + 'png', host: 'i.nhentai.net'}).on('error', function(err) {
-                console.log(err);
-                download_photo(uri, filename, callback, cnt + 1);
-                return;
-            }).on('response', function(resp) {
-                if (resp.statusCode !== 200) {
-                    download_photo(uri, filename, callback, cnt + 1);
-                    return;
-                }
-                else
-                    request(uri + 'png').on('error', function(err) {
+            request.head({url: uri + 'png'}, function(err, resp, body) {
+                if (!err && resp.statusCode === 200) {
+                    request({url: uri + 'png'}).on('error', function(err) {
                         console.log(err);
                         download_photo(uri, filename, callback, cnt + 1);
                         return;
                     }).pipe(fs.createWriteStream(filename + 'png')).on('close', callback);
+                }else {
+                    console.log(err);
+                    download_photo(uri, filename, callback, cnt + 1);
+                    return;
+                }
+                    
             });
-     })
+     });
 }
 function run(cnt, uri, val, dir) {
     const wait = function () {
@@ -292,7 +283,7 @@ async function login(username, pass) {
     // Login
     loggedin = false;
     logging_in_text();
-    request.get({uri: 'https://nhentai.net/login/', headers: {'User-Agent': UserAgent}}, async function(error, response, body) {
+    request.get({url: 'https://nhentai.net/login/', headers: {'User-Agent': UserAgent}}, async function(error, response, body) {
         var token = '';
         var keyword = 'name=\"csrfmiddlewaretoken\" value=\"';
         var index = body.indexOf(keyword) + keyword.length;
@@ -304,7 +295,7 @@ async function login(username, pass) {
         });
         var cfduid = cookies.__cfduid.value;
         var options = {
-            uri: 'https://nhentai.net/login/',
+            url: 'https://nhentai.net/login/',
             headers: {
                 'Host': 'nhentai.net',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -334,7 +325,7 @@ async function login(username, pass) {
             };
             loggedin = true;
             request({
-                uri: 'https://nhentai.net/favorites/',
+                url: 'https://nhentai.net/favorites/',
                 headers: headers
             }, function(error, response, body) {
                 // Get pages
@@ -356,36 +347,10 @@ async function login(username, pass) {
         });
     })
 }
-// async function select_page(pages, headers) {
-//     var input;
-    
-//     // console.log('Total pages: '.white + colors.red(String(pages)));
-//     const query = function(str) {
-//         return new Promise((resolve, reject) => {
-//             rl.question(str, async function(input) {
-//                 if (input == '-1')
-//                     rl.close();
-//                 else {
-//                     input = input.split(' ');
-//                     var start = Number(input[0]);
-//                     var end = Number(input[1]);
-//                     if (start <= end && end <= pages)
-//                         //await download_page(start, end, headers, input.length == 3 && input[2] == '0');
-//                         await download_page(start, end, headers, true);
-//                 }
-//                 resolve(0);
-//             });
-//         });
-//     }
-//     while (1) {
-//         //process.stdout.write(`Download page range: (ex. \"1 5\")(enter ${'-1'.red} to quit): `);
-//         await query(`Download page range: (ex. \"1 5\")(enter ${'-1'.red} to quit): `);        
-//     }
-// }
 function get_page_data(page, headers, queue_obj) {
     return new Promise(async (resolve, reject) => {
         request({
-            uri: `https://nhentai.net/favorites/?page=${page}`,
+            url: `https://nhentai.net/favorites/?page=${page}`,
             headers: headers
         }, async function(error, response, body) {
             var index_pre = 0;
@@ -434,25 +399,3 @@ function sleep(ms){
         setTimeout(resolve, ms)
     })
 }
-
-
-
-
-
-
-
-//const elNow = document.querySelector('.now-time')
-//elAlarm.addEventListener('change', onAlarmTextChange)
-
-//const alarm = moment(time).add(5, 'seconds').format('HH:mm:ss')
-//alarmTime = alarm
-//elAlarm.value = alarm
-
-/**
- * Save To Global Variable,
- * Can't Read Dom In Minimize Status.
- * @param {event} event
- */
-// function onAlarmTextChange(event) {
-//     alarmTime = event.target.value
-// }
