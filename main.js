@@ -54,13 +54,16 @@ function createWindow() {
 
     // Check new version
     request({url: 'https://github.com/CoolBANGstone/nH_Downloader-electron/releases/latest'}, function(err, resp, body) {
-        var keyword = '<span class=\"pl-2 flex-auto min-width-0 text-bold\">Downloader-';
+        if (err || resp.statusCode !== 200)
+            return;
+        var keyword = '<span class=\"pl-2 flex-auto min-width-0 text-bold\">nHDownloader-';
         var index = body.indexOf(keyword) + keyword.length;
         var current_version = app.getVersion();
         var latest_version = '';
-        while (body[index] !== '.' || body[index + 1] !== 'd') {
+        if (index < keyword.length)
+            return;
+        while (body[index] !== '.' || body[index + 1] !== 'd')
             latest_version += body[index++];
-        }
         if (current_version !== latest_version) {
             const options = {
                 type: 'question',
