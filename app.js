@@ -369,6 +369,7 @@ function get_page_data(page, headers, queue_obj) {
     });
 }
 function download_page(start, end, headers, save) {
+    hide('send', true);
     return new Promise(async (resolve, reject) => {
         var queue = [];
         for (; start <= end; start++) {
