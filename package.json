@@ -1,6 +1,6 @@
 {
   "name": "nHDownloader",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "nHentai downloader",
   "main": "main.js",
   "scripts": {
@@ -21,8 +21,7 @@
       "target": "nsis"
     },
     "mac": {
-      "category": "com.samuelhuang.app",
-      "compression": "maximum"
+      "category": "com.samuelhuang.app"
     }
   },
   "keywords": [],
@@ -30,7 +29,6 @@
   "license": "ISC",
   "dependencies": {
     "colors": "^1.3.3",
-    "downloads-folder": "^1.0.1",
     "fs": "0.0.1-security",
     "http": "0.0.0",
     "math": "0.0.3",

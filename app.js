@@ -7,8 +7,7 @@ const request = require('request');
 const setCookie = require('set-cookie-parser');
 
 
-var downloadsfolder = require('downloads-folder');
-
+var down_path = '';
 var stage = 0;
 var PARALLEL = 10;
 var username, pass, loggedin = false;
@@ -16,8 +15,6 @@ var username, pass, loggedin = false;
 var PAGES = 0, HEADERS;
 UserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:68.0) Gecko/20100101 Firefox/68.0';
 
-const down_path = path.join(downloadsfolder(), 'nH_Downloader');
-fs.mkdir(down_path, function(err) {});
 function input() {
     const input = document.getElementById('input');
     const out = document.querySelector('.output');

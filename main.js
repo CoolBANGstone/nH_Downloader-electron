@@ -36,6 +36,7 @@ function createWindow() {
         }
     });
 
+
     win.loadURL(url.format({
         pathname: path.join(__dirname, 'index.html'),
         protocol: 'file:',
@@ -49,9 +50,11 @@ function createWindow() {
     }
     // When Window Close.
     win.on('closed', () => {
-        win = null
+        win = null;
     })
-
+    win.webContents.on('did-finish-load', () => {
+        win.webContents.send('download-folder', app.getPath('downloads'));
+    })
     // Check new version
     request({url: 'https://github.com/CoolBANGstone/nH_Downloader-electron/releases/latest'}, function(err, resp, body) {
         if (err || resp.statusCode !== 200)
