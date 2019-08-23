@@ -1,13 +1,14 @@
 {
   "name": "nHDownloader",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "nHentai downloader",
   "main": "main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "electron .",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "deploy": "electron-builder build --mac --win --publish always"
   },
   "build": {
     "appId": "com.downloader.app",
@@ -40,5 +41,9 @@
     "electron": "^6.0.1",
     "electron-builder": "^21.2.0",
     "electron-packager": "^14.0.4"
+  },
+  "repository": {
+    "type" : "git",
+    "url" : "https://github.com/CoolBANGstone/nH_Downloader-electron.git"
   }
 }
