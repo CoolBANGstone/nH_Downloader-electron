@@ -91,9 +91,10 @@ function createWindow() {
                             title: 'Question',
                             message: `Download complete! Close and install update now?`,
                         };
-                        dialog.showMessageBox(null, options, (response) => {
+                        dialog.showMessageBox(null, options, async(response) => {
                             if (response === 0) {
                                 open(path.join(app.getPath('downloads'), name));
+                                await sleep(3000);
                                 app.quit();
                             }
                         });
@@ -104,4 +105,8 @@ function createWindow() {
     })
 }
 
-console.log();
+function sleep(ms){
+    return new Promise(resolve => {
+        setTimeout(resolve, ms)
+    })
+}
