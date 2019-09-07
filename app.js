@@ -12,7 +12,7 @@ var stage = 0;
 var PARALLEL = 10;
 var username, pass, loggedin = false;
 
-var PAGES = 0, HEADERS;
+var PAGES = 0, HEADERS, TAGS;
 UserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:68.0) Gecko/20100101 Firefox/68.0';
 
 function input() {
@@ -29,7 +29,8 @@ function input() {
                 '6-digit-number: Download nhentai/g/xxxxxx\n' +
                 `fav: Download account's favorite manga\n` +
                 `file: Download from 'download.txt'\n` +
-                `continue: Continue download(queue.txt)\n`;
+                `continue: Continue download(queue.txt)\n` +
+                'tag: Download mange by tag';
             break;
         case 1: // Action
             if (value == 'fav') {
@@ -59,6 +60,9 @@ function input() {
                     queue.pop();
                     argv(0, queue, true);
                 });
+            }else if (value === 'tag') {
+                stage = 5;
+                out.innerText = 'Please input tag';
             }else {
                 argv(0, value.split(' '), true);
                 stage = -1;
@@ -81,9 +85,22 @@ function input() {
             var arr = value.split(' ');
             var start = Number(arr[0]);
             var end = Number(arr[1]);
-            if (start <= end && end <= PAGES)
-                download_page(start, end, HEADERS, true);
-            stage = -1;
+            if (start <= end && end <= PAGES) {
+                download_page(start, end, HEADERS, 'https://nhentai.net/favorites/');
+                stage = -1;
+            }
+            break;
+        case 5: // tag
+            get_tag(TAGS = value.replace(' ', '-'));
+            break;
+        case 6:
+            var arr = value.split(' ');
+            var start = Number(arr[0]);
+            var end = Number(arr[1]);
+            if (start <= end && end <= PAGES) {
+                download_page(start, end, HEADERS, `https://nhentai.net/tag/${TAGS}/`);
+                stage = -1;
+            }
             break;
         case -1:
             out.innerText =
@@ -91,7 +108,8 @@ function input() {
                 '6-digit-number: Download nhentai/g/xxxxxx\n' +
                 `fav: Download account's favorite manga\n` +
                 `file: Download from 'download.txt'\n` +
-                'continue: Continue download(queue.txt)\n';
+                'continue: Continue download(queue.txt)\n' + 
+                'tag: Download mange with this tag';
             stage = 1;
     }
     input.value = '';
@@ -247,22 +265,21 @@ async function argv(start, queue, exit_when_end, argc) {
         file.end();
     }
     return new Promise(async (resolve, reject) => {
-        end = false;
         hide('send', true);
         hide('progress', false);
         document.querySelector('.output').innerText = '';
         for (var i = start; i < queue.length; i++)
             await download(queue[i]);
         hide('send', false);
-        if (end && exit_when_end)
+        if (exit_when_end)
             exit_program();
         resolve(0);
     });       
 }
-async function logging_in_text() {
+async function loading(text) {
     var cnt = 1;
     while (!loggedin) {
-        var str = 'Logging in';
+        var str = text;
         for (var i = cnt; i; i--)
             str += '.';
         if (cnt == 3)
@@ -276,10 +293,36 @@ async function logging_in_text() {
         await sleep(200);
     }
 }
+async function get_tag(tag) {
+    loggedin = false;
+    loading('Loading');
+    request({url: 'https://nhentai.net/tag/' + tag}, function(err, resp, body) {
+        loggedin = true;
+        if (err || resp.statusCode !== 200) {
+            document.querySelector('.output').innerText = 'Fetch error!\nPlease input tag again:';
+            stage = 5;
+            return;
+        }
+        var pages = 0, mul = 1;
+        keyword = '\" class=\"last\"><i class=';
+        index = body.indexOf(keyword) - 1;
+        if (index > 0) {
+            while (body[index] != '=') {
+                pages += body[index--] * mul;
+                mul *= 10;
+            }
+            PAGES = pages;
+        }else
+            PAGES = pages = 1;
+        document.querySelector('.output').innerText = `${tag}\nTotal pages: ${pages}\n` + 
+        'Insert download page range: (ex. \"1 5\")';
+        stage = 6;
+    })
+}
 async function login(username, pass) {
     // Login
     loggedin = false;
-    logging_in_text();
+    loading('Logging in');
     request.get({url: 'https://nhentai.net/login/', headers: {'User-Agent': UserAgent}}, async function(error, response, body) {
         var token = '';
         var keyword = 'name=\"csrfmiddlewaretoken\" value=\"';
@@ -329,12 +372,15 @@ async function login(username, pass) {
                 var pages = 0, mul = 1;
                 keyword = '\" class=\"last\"><i class=';
                 index = body.indexOf(keyword) - 1;
-                while (body[index] != '=') {
-                    pages += body[index--] * mul;
-                    mul *= 10;
-                }
-                // select_page(pages, headers);
-                PAGES = pages;
+                if (index > 0) {
+                    while (body[index] != '=') {
+                        pages += body[index--] * mul;
+                        mul *= 10;
+                    }
+                    // select_page(pages, headers);
+                    PAGES = pages;
+                }else
+                    PAGES = pages = 1;
                 HEADERS = headers;
                 document.querySelector('.output').innerText = `Total pages: ${pages}\n` + 
                 'Insert download page range: (ex. \"1 5\")';
@@ -344,14 +390,14 @@ async function login(username, pass) {
         });
     })
 }
-function get_page_data(page, headers, queue_obj) {
+function get_page_data(page, headers, queue_obj, url) {
     return new Promise(async (resolve, reject) => {
         request({
-            url: `https://nhentai.net/favorites/?page=${page}`,
+            url: url + `?page=${page}`,
             headers: headers
         }, async function(error, response, body) {
             var index_pre = 0;
-            var keyword = 'gallery-favorite\" data-id=\"';
+            var keyword = '/g/';
             while (1) {
                 var index = body.indexOf(keyword, index_pre);
                 var val = '';
@@ -360,7 +406,7 @@ function get_page_data(page, headers, queue_obj) {
                     break;
                 }
                 index += keyword.length;
-                while (body[index] != '\"')
+                while (body[index] != '/')
                     val += body[index++];
                 queue_obj.queue.push(val);
                 index_pre = index;
@@ -368,14 +414,14 @@ function get_page_data(page, headers, queue_obj) {
         });
     });
 }
-function download_page(start, end, headers, save) {
+function download_page(start, end, headers, url) {
     hide('send', true);
     return new Promise(async (resolve, reject) => {
         var queue = [];
         for (; start <= end; start++) {
-            await get_page_data(start, headers, {queue});
+            await get_page_data(start, headers, {queue}, url);
         }
-        await argv(0, queue, false);
+        await argv(0, queue, true);
         resolve(0);
     });
 }
