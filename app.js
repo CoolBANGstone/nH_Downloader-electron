@@ -109,7 +109,7 @@ function input() {
                 `fav: Download account's favorite manga\n` +
                 `file: Download from 'download.txt'\n` +
                 'continue: Continue download(queue.txt)\n' + 
-                'tag: Download manga with this tag';
+                'tag: Download manga by tag';
             stage = 1;
     }
     input.value = '';
