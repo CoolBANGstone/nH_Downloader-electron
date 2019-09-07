@@ -30,7 +30,7 @@ function input() {
                 `fav: Download account's favorite manga\n` +
                 `file: Download from 'download.txt'\n` +
                 `continue: Continue download(queue.txt)\n` +
-                'tag: Download mange by tag';
+                'tag: Download manga by tag';
             break;
         case 1: // Action
             if (value == 'fav') {
@@ -109,7 +109,7 @@ function input() {
                 `fav: Download account's favorite manga\n` +
                 `file: Download from 'download.txt'\n` +
                 'continue: Continue download(queue.txt)\n' + 
-                'tag: Download mange with this tag';
+                'tag: Download manga with this tag';
             stage = 1;
     }
     input.value = '';
