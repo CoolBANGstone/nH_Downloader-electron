@@ -1,7 +1,9 @@
 const {
     app,
     BrowserWindow,
-    dialog
+    dialog,
+    Menu,
+    MenuItem
 } = require('electron');
 const fs = require('fs');
 const url = require('url');
@@ -11,7 +13,10 @@ const request = require('request');
 const pkg = require('./package.json');
 UserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:68.0) Gecko/20100101 Firefox/68.0';
 
-app.on('ready', createWindow);
+app.on('ready', () => {
+    setMainMenu();
+    createWindow();
+});
 
 app.on('window-all-closed', () => {
     // darwin = MacOS
@@ -25,7 +30,123 @@ app.on('activate', () => {
         createWindow();
     }
 });
+function setMainMenu() {
+    const isMac = process.platform === 'darwin';
 
+    const template = [
+    ...(isMac ? [{
+        label: app.name,
+        submenu: [
+            { role: 'about' },
+            { type: 'separator' },
+            { role: 'services' },
+            { type: 'separator' },
+            { role: 'hide' },
+            { role: 'hideothers' },
+            { role: 'unhide' },
+            { type: 'separator' },
+            { role: 'quit' }
+        ]
+    }] : []),
+    // { role: 'fileMenu' }
+    {
+        label: 'File',
+        submenu: [
+            {
+                label: 'Open Folder...',
+                accelerator: 'CmdOrCtrl+O',
+                click: () => {open_file_dialog();}
+            },
+            isMac ? { role: 'close' } : { role: 'quit' }
+        ]
+    },
+    // { role: 'editMenu' }
+    {
+        label: 'Edit',
+        submenu: [
+            { role: 'undo' },
+            { role: 'redo' },
+            { type: 'separator' },
+            { role: 'cut' },
+            { role: 'copy' },
+            { role: 'paste' },
+            ...(isMac ? [
+                { role: 'pasteAndMatchStyle' },
+                { role: 'delete' },
+                { role: 'selectAll' },
+                { type: 'separator' },
+                {
+                    label: 'Speech',
+                    submenu: [
+                        { role: 'startspeaking' },
+                        { role: 'stopspeaking' }
+                    ]
+                }
+            ] : [
+                { role: 'delete' },
+                { type: 'separator' },
+                { role: 'selectAll' }
+             ])
+            ]
+        },
+        // { role: 'viewMenu' }
+        {
+            label: 'View',
+            submenu: [
+                { role: 'reload' },
+                { role: 'forcereload' },
+                { role: 'toggledevtools' },
+                { type: 'separator' },
+                { role: 'resetzoom' },
+                { role: 'zoomin' },
+                { role: 'zoomout' },
+                { type: 'separator' },
+                { role: 'togglefullscreen' }
+            ]
+        },
+        // { role: 'windowMenu' }
+        {
+            label: 'Window',
+            submenu: [
+                { role: 'minimize' },
+                { role: 'zoom' },
+                ...(isMac ? [
+                    { type: 'separator' },
+                    { role: 'front' },
+                    { type: 'separator' },
+                    { role: 'window' }
+                ] : [
+                    { role: 'close' }
+                ])
+            ]
+        },
+        {
+            role: 'help',
+            submenu: [{
+                label: 'Learn More',
+                click: async () => {
+                    const { shell } = require('electron')
+                    await shell.openExternal('https://electronjs.org')
+                }
+            }
+            ]
+        }
+    ]
+    Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+function open_file_dialog() {
+    if (process.platform === 'darwin') {
+        const window = win;
+        dialog.showOpenDialog(window, { properties: [ 'openDirectory', 'openFile' ]}, function (folder) {
+            if (folder) 
+                win.webContents.send('selected-directory', folder);
+        });
+    }else
+        dialog.showOpenDialog({properties: [ 'openDirectory', 'openFile' ]}, function (folder) {
+            if (folder)
+                win.webContents.send('selected-directory', folder);
+        })
+}
 function createWindow() {
     // Create the browser window.
     var transparent = process.platform === 'darwin';

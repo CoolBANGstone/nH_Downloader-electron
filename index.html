@@ -38,7 +38,10 @@
             down_path = path.join(message, 'nH_Downloader');
             fs.mkdir(down_path, function(err) {});
         })
-       
+        const ipc = require('electron').ipcRenderer;
+        ipc.on('selected-directory', function (event, path) {
+            down_path = String(path);
+        })
     </script>
 </body>
 
