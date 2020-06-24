@@ -11,7 +11,12 @@ const path = require('path');
 const open = require('open');
 const request = require('request');
 const pkg = require('./package.json');
+const compareVersions = require('compare-versions');
+
 UserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:68.0) Gecko/20100101 Firefox/68.0';
+
+var downloadFolder;
+var loginCookies = '';
 
 app.on('ready', () => {
     setMainMenu();
@@ -56,6 +61,11 @@ function setMainMenu() {
                 label: 'Open Folder...',
                 accelerator: 'CmdOrCtrl+O',
                 click: () => {open_file_dialog();}
+            },
+            {
+                label: 'Login Window',
+                accelerator: 'CmdOrCtrl+L',
+                click: () => {createLoginWindow();}
             },
             isMac ? { role: 'close' } : { role: 'quit' }
         ]
@@ -138,21 +148,69 @@ function open_file_dialog() {
     if (process.platform === 'darwin') {
         const window = win;
         dialog.showOpenDialog(window, { properties: [ 'openDirectory', 'openFile' ]}, function (folder) {
-            if (folder) 
+            if (folder)  {
+                folder = folder[0];
                 win.webContents.send('selected-directory', folder);
+                downloadFolder = folder;
+                console.log(downloadFolder);
+                loadCookies();
+                saveCookies();
+            }
         });
     }else
         dialog.showOpenDialog({properties: [ 'openDirectory', 'openFile' ]}, function (folder) {
-            if (folder)
+            if (folder)  {
+                folder = folder[0];
                 win.webContents.send('selected-directory', folder);
+                downloadFolder = folder;
+                loadCookies();
+                saveCookies();
+            }
         })
+}
+function createLoginWindow() {
+    var transparent = process.platform === 'darwin';
+    win2 = new BrowserWindow({
+        width: 500,
+        height: 700,
+        maximizable: false,
+        transparent: transparent,
+        backgroundColor: "#404040",
+        webPreferences: {
+            nodeIntegration: true
+        }
+    });
+    const loginURL = 'https://nhentai.net/login';
+    win2.loadURL(loginURL).then(async() => {
+        try {
+            while (1) {
+                if (win2.webContents.getURL().indexOf('login') === -1) {
+                    const session = win2.webContents.session;
+                    session.cookies.get({url : 'https://nhentai.net'}, function(error, cookies) {
+                        loginCookies = '';
+                        for (var i = 0; i < cookies.length; i++) {
+                            var info = cookies[i];
+                            loginCookies += `${info.name}=${info.value}; `;
+                        }
+                        console.log(loginCookies);
+                        saveCookies();
+                    });
+                    win2.close();
+                    break;
+                }
+                await sleep(100);
+            }
+        }catch(err) {
+
+        }
+    })
 }
 function createWindow() {
     // Create the browser window.
     var transparent = process.platform === 'darwin';
     win = new BrowserWindow({
-        width: 400,
-        height: 400,
+        width: 500,
+        height: 500,
         maximizable: false,
         transparent: transparent,
         backgroundColor: "#404040",
@@ -178,7 +236,10 @@ function createWindow() {
         win = null;
     })
     win.webContents.on('did-finish-load', () => {
-        win.webContents.send('download-folder', app.getPath('downloads'));
+        downloadFolder = path.join(app.getPath('downloads'), 'nH_Downloader');
+        fs.mkdir(downloadFolder, function(err) {});
+        win.webContents.send('selected-directory', downloadFolder);
+        loadCookies();
     })
     // Check new version
     request({
@@ -190,7 +251,7 @@ function createWindow() {
         current_version = pkg.version;
         latest_version = body.name;
         console.log(latest_version , current_version);
-        if (current_version !== latest_version) {
+        if (compareVersions(current_version, latest_version) === -1) {
             const options = {
                 type: 'question',
                 buttons: [ 'Yes', 'No'],
@@ -226,6 +287,24 @@ function createWindow() {
     })
 }
 
+function saveCookies() {
+    if (loginCookies === '') {
+        return;
+    }
+    fs.writeFile(path.join(downloadFolder, 'cookies.json'), String(loginCookies), (err) => {
+        if (err) {
+            return console.log(err);
+        }
+    });
+}
+function loadCookies() {
+    fs.readFile(path.join(downloadFolder, 'cookies.json'), (err, data) => {
+        if (err) {
+            return;
+        }
+        loginCookies = data;
+    });
+}
 function sleep(ms){
     return new Promise(resolve => {
         setTimeout(resolve, ms)

@@ -10,7 +10,7 @@ const setCookie = require('set-cookie-parser');
 var down_path = '';
 var stage = 0;
 var PARALLEL = 10;
-var username, pass, loggedin = false;
+var username, pass, load_complete = false;
 
 var PAGES = 0, HEADERS, TAGS;
 UserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:68.0) Gecko/20100101 Firefox/68.0';
@@ -34,8 +34,8 @@ function input() {
             break;
         case 1: // Action
             if (value == 'fav') {
-                stage = 2;
-                out.innerText = 'Username or Email:';
+                stage = 4;
+                login();
             }else if (value == 'file') {
                 stage = -1;
                 fs.readFile(path.join(down_path, 'download.txt'), function (err, data) {
@@ -68,19 +68,22 @@ function input() {
                 stage = -1;
             }
             break;
-        case 2:
-            username = value;
-            stage = 3;
-            out.innerText = 'Password:';
-            document.getElementById('input').type = 'password';
-            break;
-        case 3:
-            pass = value;
-            stage = 4;
-            document.getElementById('input').type = 'text';
-            hide('send', true);
-            login(username, pass);
-            break;
+        
+        // Login type changed.
+        //
+        // case 2:
+        //     username = value;
+        //     stage = 3;
+        //     out.innerText = 'Password:';
+        //     document.getElementById('input').type = 'password';
+        //     break;
+        // case 3:
+        //     pass = value;
+        //     stage = 4;
+        //     document.getElementById('input').type = 'text';
+        //     hide('send', true);
+        //     login(username, pass);
+        //     break;
         case 4:
             var arr = value.split(' ');
             var start = Number(arr[0]);
@@ -153,16 +156,15 @@ function download(val) {
             while (body[index] != '/')
                 uri += body[index++];
             //get pages
-            index = body.indexOf(' pages</div>');
-            while (body[index - 1] != '>')
-                index--;
-            while (body[index] != ' ')
+            keyword = '<span class=\"name\">';
+            index = body.indexOf(keyword, body.indexOf('Pages:')) + keyword.length;
+            while (body[index] != '<')
                 cnt += body[index++];
             finish = cnt = parseInt(cnt, 10);
             //get title
-            keyword = '<h2>';
+            keyword = '<span class=\"pretty\">';
             index = body.indexOf(keyword) + keyword.length;
-            while (body[index] != '<' || body[index + 1] != '/' || body[index + 2] != 'h')
+            while (body[index] != '<' || body[index + 1] != '/' || body[index + 2] != 's')
                 title += body[index++];
 
             var dirname = replace_str(`${title}(${val})`);
@@ -278,7 +280,7 @@ async function argv(start, queue, exit_when_end, argc) {
 }
 async function loading(text) {
     var cnt = 1;
-    while (!loggedin) {
+    while (!load_complete) {
         var str = text;
         for (var i = cnt; i; i--)
             str += '.';
@@ -286,7 +288,7 @@ async function loading(text) {
             cnt = 1;
         else
             cnt++;
-        if (!loggedin)
+        if (!load_complete)
             document.querySelector('.output').innerText = str;
         else
             break;
@@ -294,10 +296,10 @@ async function loading(text) {
     }
 }
 async function get_tag(tag) {
-    loggedin = false;
+    load_complete = false;
     loading('Loading');
     request({url: 'https://nhentai.net/tag/' + tag}, function(err, resp, body) {
-        loggedin = true;
+        load_complete = true;
         if (err || resp.statusCode !== 200) {
             document.querySelector('.output').innerText = 'Fetch error!\nPlease input tag again:';
             stage = 5;
@@ -319,76 +321,59 @@ async function get_tag(tag) {
         stage = 6;
     })
 }
-async function login(username, pass) {
+async function login() {
     // Login
-    loggedin = false;
+    load_complete = false;
     loading('Logging in');
-    request.get({url: 'https://nhentai.net/login/', headers: {'User-Agent': UserAgent}}, async function(error, response, body) {
-        var token = '';
-        var keyword = 'name=\"csrfmiddlewaretoken\" value=\"';
-        var index = body.indexOf(keyword) + keyword.length;
-        while (body[index + 1] != '>')
-            token += body[index++];
-        var cookies = await setCookie.parse(response.headers['set-cookie'], {
-            decodeValues: true,
-            map: true
-        });
-        var cfduid = cookies.__cfduid.value;
-        var options = {
-            url: 'https://nhentai.net/login/',
-            headers: {
-                'Host': 'nhentai.net',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Accept-Language': 'en-US,en;q=0.5',
-                'User-Agent': UserAgent,
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Referer': 'https://nhentai.net/login/',
-                'DNT': '1',
-                'Cookie': `__cfduid=${cfduid}; csrftoken=${cookies.csrftoken.value}`,
-                'Connection': 'keep-alive'
-            },
-            form: {
-                'csrfmiddlewaretoken': token,
-                'username_or_email': username,
-                'password': pass
-            }
+    fs.readFile(path.join(down_path, 'cookies.json'), (err, data) => {
+        load_complete = true;
+        if (err) {
+            stage = -1;
+            document.querySelector('.output').innerText = "Wrong session cookies! Press Cmd/Ctrl+L to open login window.";
+            return;
         }
-        request.post(options, async function(error, response, body) {
-            var cookies = setCookie.parse(response.headers['set-cookie'], {
-                decodeValues: true,
-                map: true
-            });
-            var headers = {
-                'User-Agent': UserAgent,
-                'Cookie': `__cfduid=${cfduid}; csrftoken=${cookies.csrftoken.value}; sessionid=${cookies.sessionid.value}`,
-            };
-            loggedin = true;
-            request({
-                url: 'https://nhentai.net/favorites/',
-                headers: headers
-            }, function(error, response, body) {
-                // Get pages
-                var pages = 0, mul = 1;
-                keyword = '\" class=\"last\"><i class=';
-                index = body.indexOf(keyword) - 1;
-                if (index > 0) {
-                    while (body[index] != '=') {
-                        pages += body[index--] * mul;
-                        mul *= 10;
-                    }
-                    // select_page(pages, headers);
-                    PAGES = pages;
-                }else
-                    PAGES = pages = 1;
-                HEADERS = headers;
-                document.querySelector('.output').innerText = `Total pages: ${pages}\n` + 
-                'Insert download page range: (ex. \"1 5\")';
-                hide('send', false);
-                document.getElementById('input').focus();
-            });
+        var headers = {
+            'User-Agent': UserAgent,
+            'Cookie': data,
+        };
+        request({
+            url: 'https://nhentai.net/favorites/',
+            headers: headers
+        }, function(error, response, body) {
+
+            // Check if login success
+            var keyword = '<title>';
+            var title = '';
+            index = body.indexOf(keyword) + keyword.length;
+            while (body[index] !== '<') {
+                title += body[index++];
+            }
+            if (title.indexOf('Login') !== -1) {
+                stage = -1;
+                document.querySelector('.output').innerText = "Wrong session cookies! Press Cmd/Ctrl+L to open login window.";
+                return;
+            }
+
+            // Get pages
+            var pages = 0, mul = 1;
+            keyword = '\" class=\"last\"><i class=';
+            index = body.indexOf(keyword) - 1;
+            if (index > 0) {
+                while (body[index] != '=') {
+                    pages += body[index--] * mul;
+                    mul *= 10;
+                }
+                // select_page(pages, headers);
+                PAGES = pages;
+            }else
+                PAGES = pages = 1;
+            HEADERS = headers;
+            document.querySelector('.output').innerText = `Total pages: ${pages}\n` + 
+            'Insert download page range: (ex. \"1 5\")';
+            hide('send', false);
+            document.getElementById('input').focus();
         });
-    })
+    });
 }
 function get_page_data(page, headers, queue_obj, url) {
     return new Promise(async (resolve, reject) => {

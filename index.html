@@ -34,13 +34,10 @@
             }else if (event.keyCode === 13)
                 input();
         });
-        require('electron').ipcRenderer.on('download-folder', (event, message) => {
-            down_path = path.join(message, 'nH_Downloader');
-            fs.mkdir(down_path, function(err) {});
-        })
         const ipc = require('electron').ipcRenderer;
         ipc.on('selected-directory', function (event, path) {
             down_path = String(path);
+            console.log(down_path)
         })
     </script>
 </body>
