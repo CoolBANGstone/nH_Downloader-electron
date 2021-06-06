@@ -325,7 +325,7 @@ async function login() {
     // Login
     load_complete = false;
     loading('Logging in');
-    fs.readFile(path.join(down_path, 'cookies.json'), (err, data) => {
+    fs.readFile(path.join(down_path, 'cookies.txt'), (err, data) => {
         load_complete = true;
         if (err) {
             stage = -1;
