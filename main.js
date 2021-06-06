@@ -186,7 +186,7 @@ function createLoginWindow() {
             while (1) {
                 if (win2.webContents.getURL().indexOf('login') === -1) {
                     const session = win2.webContents.session;
-                    session.cookies.get({url : 'https://nhentai.net'}, function(error, cookies) {
+                    session.cookies.get({url : 'https://nhentai.net'}).then(cookies => {
                         loginCookies = '';
                         for (var i = 0; i < cookies.length; i++) {
                             var info = cookies[i];
@@ -194,14 +194,16 @@ function createLoginWindow() {
                         }
                         console.log(loginCookies);
                         saveCookies();
-                    });
+                    }).catch((err) => {
+                        console.error(err);
+                    })
                     win2.close();
                     break;
                 }
                 await sleep(100);
             }
         }catch(err) {
-
+            console.log(err);
         }
     })
 }
@@ -215,7 +217,8 @@ function createWindow() {
         transparent: transparent,
         backgroundColor: "#404040",
         webPreferences: {
-            nodeIntegration: true
+            nodeIntegration: true,
+            contextIsolation: false
         }
     });
 
@@ -291,14 +294,14 @@ function saveCookies() {
     if (loginCookies === '') {
         return;
     }
-    fs.writeFile(path.join(downloadFolder, 'cookies.json'), String(loginCookies), (err) => {
+    fs.writeFile(path.join(downloadFolder, 'cookies.txt'), String(loginCookies), (err) => {
         if (err) {
             return console.log(err);
         }
     });
 }
 function loadCookies() {
-    fs.readFile(path.join(downloadFolder, 'cookies.json'), (err, data) => {
+    fs.readFile(path.join(downloadFolder, 'cookies.txt'), (err, data) => {
         if (err) {
             return;
         }
